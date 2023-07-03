@@ -1,5 +1,5 @@
-import useDragAndDrop from '@/hooks/useDragAndDrop';
-import { createDragHoverCallback } from '@/utils/createDragHoverCallback';
+import DropZone from './DropZone';
+import { useDrag } from 'react-dnd';
 import React, { useRef } from 'react';
 
 const getColor = (type) => {
@@ -13,47 +13,62 @@ const getColor = (type) => {
 };
 
 export const Drag = (props) => {
-  const { type, children } = props;
+  const { type, children, isLast } = props;
   const ref = useRef();
 
-  const { isDragging, canDrop, isOver } = useDragAndDrop(ref, {
-    item: {
-      address: props.address,
-      index: props.index,
-      type: props.type,
-      parentType: props.parentType,
+  const [{ isDragging }, drag] = useDrag(
+    {
+      item: {
+        address: props.address,
+        index: props.index,
+        type: props.type,
+        parentType: props.parentType,
+      },
+      type,
+      isDragging: (monitor) => {
+        return props.address === monitor.getItem().address;
+      },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
     },
-    type,
-    hover: createDragHoverCallback(ref, props, props.setData),
-  });
-
-  const extraProps = {};
-
-  if (isDragging) {
-    extraProps.height = 0;
-
-    extraProps.padding = 0;
-    extraProps.margin = 0;
-
-    extraProps.overflow = 'hidden';
-    extraProps.borderTop = '4px solid black';
-  }
+    [props]
+  );
 
   return (
     <>
+      <DropZone
+        item={{
+          address: props.address,
+          index: props.index,
+          type: props.type,
+          parentType: props.parentType,
+        }}
+        onDrop={props.setData}
+      />
       <div
-        ref={ref}
+        ref={drag}
         style={{
           background: getColor(type),
           color: 'white',
           margin: 30,
           padding: 50,
           border: '4px solid #ccc',
-          ...extraProps,
         }}
       >
-        {children}
+        {children} {props.text} {props.address}
       </div>
+      {isLast && (
+        <DropZone
+          onDrop={props.setData}
+          item={{
+            address: props.address.replace(/\d$/gi, (n) => `${Number(n) + 1}`),
+            index: Number(props.index) + 1,
+            type: props.type,
+            parentType: props.parentType,
+          }}
+        />
+      )}
     </>
   );
 };

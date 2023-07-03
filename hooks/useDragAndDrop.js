@@ -1,13 +1,11 @@
 import { useDrag, useDrop } from 'react-dnd';
 
 export function useDragAndDrop(ref, payload) {
-  console.log({ payload });
   const [{ isDragging }, drag] = useDrag(
     {
       type: payload.type,
       item: payload.item,
       isDragging: (monitor) => {
-        console.log({ pi: payload.item, mi: monitor.getItem() });
         return payload.item.address === monitor.getItem().address;
       },
       collect: (monitor) => ({
@@ -50,8 +48,6 @@ export function useDragAndDrop(ref, payload) {
   );
 
   drag(drop(ref));
-
-  console.log({ isDragging }, '54');
 
   return {
     isOver,
