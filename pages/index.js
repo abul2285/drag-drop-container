@@ -170,8 +170,8 @@ export default function Home() {
     if (dropPath.includes(dragPath)) return;
     const _data = JSON.parse(JSON.stringify(data));
     const dragItem = _pull(_data, dragPath);
-    if (!dragItem) return;
     console.log({ dragItem, _data }, '75');
+    if (!dragItem) return;
     const path = getDropPath({ dragPath, dropPath });
     console.log({ dragPath, dropPath, path });
     _put({ data: _data, path, value: dragItem });
