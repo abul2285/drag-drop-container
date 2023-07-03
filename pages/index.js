@@ -27,6 +27,7 @@ const Recursive = ({
   address = '',
   text,
   parentType,
+  isLast,
 }) => {
   const path = address ? `${address}.${index}` : `${index}`;
   const emptyType = getEmptyProps(type);
@@ -39,6 +40,7 @@ const Recursive = ({
       parentType={parentType}
       address={path}
       text={text}
+      isLast={isLast}
     >
       {content?.length
         ? content.map((item, idx) => (
@@ -50,6 +52,7 @@ const Recursive = ({
               setData={setData}
               index={idx}
               address={path}
+              isLast={content.length - 1 === idx}
             />
           ))
         : emptyType && (
@@ -78,9 +81,7 @@ const _reducer = (data, path, cb) => {
 };
 
 const _get = ({ data, path }) => {
-  console.log({ data, path });
   return _reducer(data, path, (acc, curr, index, { length }) => {
-    console.log({ acc, curr, length });
     if (index === length - 1) {
       return acc.slice(curr, 1).at(0);
     }
@@ -91,10 +92,7 @@ const _get = ({ data, path }) => {
 };
 
 const _pull = (data, path) => {
-  console.log({ data, path });
   return _reducer(data, path, (acc, curr, index, { length }) => {
-    console.log({ acc, curr, length });
-    // 0.
     if (index === length - 1) {
       if (!acc) return;
       return acc.splice(curr, 1).at(0);
@@ -107,21 +105,17 @@ const _pull = (data, path) => {
 
 const _put = ({ data, path, value }) => {
   return _reducer(data, path, (acc, curr, index, { length }) => {
-    console.log({ acc, curr, value }, '50');
     if (index === length - 1) {
       return acc.splice(curr, 0, value);
     }
     const { content } = acc[curr] || {};
     if (!content) return;
-
-    console.log({ acc, content }, '50');
     return content;
   });
 };
 
 const _drop = ({ data, path }) => {
   return _reducer(data, path, (acc, curr, index, { length }) => {
-    console.log({ acc, curr }, 'remove');
     if (index === length - 1) {
       acc.splice(curr, 1);
     }
@@ -142,7 +136,7 @@ const getDeletePath = ({ dragPath = '', dropPath = '' }) => {
 };
 
 const getDropPath = ({ dragPath = '', dropPath = '' }) => {
-  if (dragPath.length >= dropPath.length) return dropPath;
+  if (dragPath > dropPath) return dropPath;
 
   const isDroppingInside = dropPath.startsWith(dragPath.slice(0, -2));
   if (isDroppingInside) {
@@ -155,7 +149,6 @@ const getDropPath = ({ dragPath = '', dropPath = '' }) => {
       Number(dropPathParts[length - 1]) - 1,
       ...dropPathParts.slice(length),
     ].map((part) => part.toString());
-    console.log({ updatedPath });
 
     return updatedPath.join('.');
   }
@@ -163,27 +156,57 @@ const getDropPath = ({ dragPath = '', dropPath = '' }) => {
   return dropPath;
 };
 
+const getEdgeItem = ({ path, data }) => {
+  return path.reduce((nestedResource, position, index) => {
+    if (path.length - 1 === index) {
+      return nestedResource[position];
+    }
+    return nestedResource[position].content;
+  }, data);
+};
+
+const pullAndPut = (source, sourcePosition, targetPosition) => {
+  const updatedSource = JSON.parse(JSON.stringify(source));
+
+  const sourcePath = sourcePosition.split('.');
+  const targetPath = targetPosition.split('.');
+
+  const sourceItem = getEdgeItem({ path: sourcePath, data: updatedSource });
+
+  const sourceIndex = sourcePath.pop();
+  const targetIndex = targetPath.pop();
+
+  const sourceParent = getEdgeItem({ path: sourcePath, data: updatedSource });
+
+  const isSamePosition =
+    targetPosition.replace(/\d$/gi, () => `${sourceIndex}`) === sourcePosition;
+
+  if (isSamePosition) {
+    const [removedItem] = sourceParent.content.splice(sourceIndex, 1);
+    const insertionIndex =
+      sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    sourceParent.content.splice(insertionIndex, 0, removedItem);
+    return updatedSource;
+  }
+
+  const targetParent = getEdgeItem({ path: targetPath, data: updatedSource });
+
+  sourceParent.content.splice(sourceIndex, 1);
+  targetParent.content.splice(targetIndex, 0, sourceItem);
+  return updatedSource;
+};
+
 export default function Home() {
   const [data, setData] = useState(source);
   const handleDrag = ({ dragPath, dropPath }) => {
-    console.log({ dragPath, dropPath });
-    if (dropPath.includes(dragPath)) return;
-    const _data = JSON.parse(JSON.stringify(data));
-    const dragItem = _pull(_data, dragPath);
-    if (!dragItem) return;
-    console.log({ dragItem, _data }, '75');
-    const path = getDropPath({ dragPath, dropPath });
-    console.log({ dragPath, dropPath, path });
-    _put({ data: _data, path, value: dragItem });
+    const updateSource = pullAndPut(data, dragPath, dropPath);
 
-    setData(_data);
+    setData(updateSource);
     return true;
   };
 
   const handleAdd = (item) => {
     const _data = JSON.parse(JSON.stringify(data));
-
-    console.log('hey', item, _data);
     _put({
       data: _data,
       path: item.address,
@@ -217,6 +240,7 @@ export default function Home() {
                 setData={handleDrag}
                 index={idx}
                 handleAdd={handleAdd}
+                isLast={data.length - 1 === idx}
               />
             );
           })}

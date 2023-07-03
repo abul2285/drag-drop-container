@@ -11,6 +11,15 @@ export const source = [
             content: [
               {
                 type: 'component',
+                text: 'el 1',
+              },
+              {
+                type: 'component',
+                text: 'el 2',
+              },
+              {
+                type: 'component',
+                text: 'el 3',
               },
             ],
           },

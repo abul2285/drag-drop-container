@@ -2,7 +2,6 @@ const getNumericAddress = (address) => Number(address.split('.').join(''));
 
 export const createDragHoverCallback = (ref, currentItem, onDrop) => {
   return (otherItem, monitor) => {
-    console.log('before');
     if (!monitor.canDrop()) return;
     const dragIndex = getNumericAddress(otherItem.address);
     const hoverIndex = getNumericAddress(currentItem.address);
